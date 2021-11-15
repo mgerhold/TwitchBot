@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "TwitchBot": {
-      "commandName": "Project",
-      "workingDirectory": "C:\\dev\\Cs\\TwitchBot"
-    }
-  }
-}

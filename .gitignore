@@ -390,3 +390,4 @@ FodyWeavers.xsd
 .editorconfig
 commands.json
 config.json
+TwitchBot/Properties/launchSettings.json
