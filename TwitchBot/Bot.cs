@@ -10,13 +10,13 @@ using TwitchLib.Communication.Models;
 namespace TwitchBot {
     class Bot {
         private TwitchClient client;
-        private bool logging = true;
+        private bool logging = true; // output logging messages? gets automatically disabled on successful connect
         private Config config;
-        private List<NativeCommand> commands = new();
-        private EchoCommandList simpleCommands = EchoCommandList.LoadOrCreate();
+        private CommandList nativeCommands = new(); // commands that execute C# code
+        private CommandList customCommands = PersistentCommandList.LoadOrCreate("commands.json"); // commands that can be set through the Twitch chat
 
         public Bot(Config config) {
-            SetupCommands();
+            SetupNativeCommands();
             this.config = config;
             var credentials = new ConnectionCredentials(config.Username, config.OAuthToken);
             var clientOptions = new ClientOptions {
@@ -43,8 +43,8 @@ namespace TwitchBot {
             return true;
         }
 
-        private void SetupCommands() {
-            commands.Add(new NativeCommand {
+        private void SetupNativeCommands() {
+            nativeCommands.Commands.Add(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!add"),
                 Authenticator = Authenticators.ModOrBroadcaster,
                 Handler = (bot, message) => {                    
@@ -53,17 +53,16 @@ namespace TwitchBot {
                         bot.SendMessage($"@{message.Username} Syntax: !add <trigger> <message>");
                         return;
                     }
-                    simpleCommands.Commands.Add(new EchoCommand {
+                    customCommands.Add(new EchoCommand {
                         Trigger = Triggers.StartsWithWord(parts[1]),
                         Message = parts[2],
                         Cooldown = TimeSpan.FromSeconds(29)
                     });
-                    simpleCommands.Save();
                     bot.SendMessage($"@{message.Username} Kommando {parts[1]} hinzugefügt!");
                 },
                 Cooldown = null
             });
-            commands.Add(new NativeCommand {
+            nativeCommands.Commands.Add(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!remove"),
                 Authenticator = Authenticators.ModOrBroadcaster,
                 Handler = (bot, message) => {
@@ -73,35 +72,30 @@ namespace TwitchBot {
                         return;
                     }
                     var trigger = parts[1];
-                    var findResult = simpleCommands.Commands.FirstOrDefault(
+                    var findResult = customCommands.Commands.FirstOrDefault(
                         command => command.Trigger.ShouldTrigger(trigger));
                     if (findResult is null) {
                         bot.SendMessage($"@{message.Username} Unbekannter Trigger: \"{trigger}\"");
                         return;
                     }
-                    simpleCommands.Commands.Remove(findResult);
-                    simpleCommands.Save();
+                    customCommands.Remove(findResult);
                     bot.SendMessage($"@{message.Username} Kommando {trigger} entfernt!");
                 },
                 Cooldown = null
             });
-            commands.Add(new NativeCommand {
+            nativeCommands.Commands.Add(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!list"),
                 Handler = (bot, message) => {
-                    List<String> commandList = new();
-                    commandList.AddRange(commands
-                        .Where(command => command.Trigger.HasListRepresentation())
-                        .Where(command => command.Authenticator.Authenticate(message))
-                        .Select(command => command.Trigger.GetListRepresentation()));
-                    commandList.AddRange(simpleCommands.Commands
-                        .Where(command => command.Trigger.HasListRepresentation())
-                        .Where(command => command.Authenticator.Authenticate(message))
-                        .Select(command => command.Trigger.GetListRepresentation()));
-                    commandList.Sort();
-                    var listString = String.Join(" ", commandList);
+                    var listString = nativeCommands.Commands
+                            .Concat(customCommands.Commands)
+                            .Where(command => command.Trigger.HasListRepresentation())
+                            .Where(command => command.Authenticator.Authenticate(message))
+                            .Select(command => command.Trigger.GetListRepresentation())
+                            .OrderBy(representationString => representationString)
+                            .Aggregate((previous, toAppend) => $"{previous} {toAppend}");
                     bot.SendMessage($"@{message.Username} Verfügbare Kommandos: {listString}");
                 },
-                Cooldown = null //TimeSpan.FromSeconds(30)
+                Cooldown = TimeSpan.FromSeconds(30)
             });
         }
 
@@ -118,18 +112,13 @@ namespace TwitchBot {
         }
 
         private bool HandleCommands(ChatMessage message) {
-            var parts = message.Message.Trim().Split(" ", 2);
-            if (parts.Length == 0) {
-                return false;
-            }
-            String trigger = parts[0];
-            foreach (var command in commands) {
+            foreach (var command in nativeCommands.Commands.Concat(customCommands.Commands)) {
                 if (command.Trigger.ShouldTrigger(message)) {
                     command.Invoke(this, message);
                     return true;
                 }
             }
-            return simpleCommands.Handle(this, message);
+            return false;
         }
 
         private void OnClientMessageReceived(object sender, OnMessageReceivedArgs args) {

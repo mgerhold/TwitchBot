@@ -5,36 +5,40 @@ using System.IO;
 using TwitchLib.Client.Models;
 
 namespace TwitchBot {
-    class EchoCommandList {
-        public List<EchoCommand> Commands { get; set; } = new();
+    class PersistentCommandList : CommandList {
 
-        private const String filename = "commands.json";
+        private PersistentCommandList(String filename, List<Command> commands) {
+            this.filename = filename;
+            Commands = commands;
+        }
 
-        public static EchoCommandList LoadOrCreate() {
+        private String filename;
+
+        public static PersistentCommandList LoadOrCreate(String filename) {
             if (File.Exists(filename)) {
-                return Load();
+                return Load(filename);
             }
             Console.WriteLine("Creating new empty commands list");
-            var result = new EchoCommandList();
+            var result = new PersistentCommandList(filename, new List<Command>());
             result.Save();
             return result;
         }
 
-        public static EchoCommandList Load() {
+        public static PersistentCommandList Load(String filename) {
             String lines;
             try {
                 lines = File.ReadAllText(filename);
             } catch (Exception e) {
                 throw new Exception("Unable to open command list file", e);
             }
-            var deserialized = JsonConvert.DeserializeObject<List<EchoCommand>>(lines,
+            var deserialized = JsonConvert.DeserializeObject<List<Command>>(lines,
                 new JsonSerializerSettings {
                     TypeNameHandling = TypeNameHandling.Auto
                 });
             if (deserialized is null) {
                 throw new Exception("Unable to deserialize command list");
             }
-            return new EchoCommandList { Commands = deserialized };
+            return new PersistentCommandList(filename, deserialized);
         }
 
         public void Save() {
@@ -48,23 +52,16 @@ namespace TwitchBot {
             }
         }
 
-        private String ApplyPlaceholders(String response) {
-            return response;
+        public override void Add(Command command) {
+            base.Add(command);
+            Save();
         }
 
-        public bool Handle(Bot bot, ChatMessage message) {
-            var parts = message.Message.Trim().Split(" ", 2);
-            if (parts.Length == 0) {
-                return false;
-            }
-            foreach (var command in Commands) {
-                if (command.Trigger.ShouldTrigger(message)) {
-                    command.Invoke(bot, message);
-                    return true;
-                }
-            }
-            return false;
+        public override void Remove(Command command) {
+            base.Remove(command);
+            Save();
         }
+
     }
 
 }
