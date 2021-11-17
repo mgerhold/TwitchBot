@@ -2,45 +2,47 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TwitchLib.Client.Models;
 
 namespace TwitchBot {
-
-    class SimpleCommandList {
-        public List<SimpleCommand> Commands { get; set; } = new();
+    class EchoCommandList {
+        public List<EchoCommand> Commands { get; set; } = new();
 
         private const String filename = "commands.json";
 
-        public static SimpleCommandList LoadOrCreate() {
+        public static EchoCommandList LoadOrCreate() {
             if (File.Exists(filename)) {
                 return Load();
             }
             Console.WriteLine("Creating new empty commands list");
-            var result = new SimpleCommandList();
+            var result = new EchoCommandList();
             result.Save();
             return result;
         }
 
-        public static SimpleCommandList Load() {
+        public static EchoCommandList Load() {
             String lines;
             try {
                 lines = File.ReadAllText(filename);
             } catch (Exception e) {
                 throw new Exception("Unable to open command list file", e);
             }
-            var deserialized = JsonConvert.DeserializeObject<List<SimpleCommand>>(lines);
+            var deserialized = JsonConvert.DeserializeObject<List<EchoCommand>>(lines,
+                new JsonSerializerSettings {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
             if (deserialized is null) {
                 throw new Exception("Unable to deserialize command list");
             }
-            return new SimpleCommandList { Commands = deserialized };
+            return new EchoCommandList { Commands = deserialized };
         }
 
         public void Save() {
             try {
-                File.WriteAllText(filename, JsonConvert.SerializeObject(Commands, Formatting.Indented));
+                File.WriteAllText(filename, JsonConvert.SerializeObject(Commands, Formatting.Indented,
+                    new JsonSerializerSettings {
+                        TypeNameHandling = TypeNameHandling.All
+                    }));
             } catch (Exception e) {
                 throw new Exception("Unable to save command list", e);
             }
@@ -50,24 +52,19 @@ namespace TwitchBot {
             return response;
         }
 
-        public String Handle(ChatMessage message) {
+        public bool Handle(Bot bot, ChatMessage message) {
             var parts = message.Message.Trim().Split(" ", 2);
             if (parts.Length == 0) {
-                return null;
+                return false;
             }
             foreach (var command in Commands) {
-                if (command.Trigger == parts[0] && command.CanInvoke) {
-                    command.Invoke(message);
-                    return ApplyPlaceholders(command.Message);
+                if (command.Trigger.ShouldTrigger(message)) {
+                    command.Invoke(bot, message);
+                    return true;
                 }
             }
-            return null;
+            return false;
         }
-    }
-
-    class SimpleCommand : AbstractCommand {
-        public String Trigger { get; set; }
-        public String Message { get; set; }
     }
 
 }
