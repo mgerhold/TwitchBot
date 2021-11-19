@@ -11,7 +11,7 @@ namespace TwitchBot {
         public static IAuthenticator Pleb { get; } = new PlebAuthenticator();
         public static IAuthenticator Mod { get; } = new ModAuthenticator();
         public static IAuthenticator Broadcaster { get; } = new BroadcasterAuthenticator();
-        public static IAuthenticator ModOrBroadcaster { get; } = new ModOrBroadcasterAuthenticator();
+        public static IAuthenticator ModOrBroadcaster { get; } = Mod | Broadcaster;
 
         private class ModAuthenticator : IAuthenticator {
             public bool Authenticate(ChatMessage message) {
