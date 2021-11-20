@@ -31,11 +31,5 @@ namespace TwitchBot {
             }
         }
 
-        private class ModOrBroadcasterAuthenticator : IAuthenticator {
-            public bool Authenticate(ChatMessage message) {
-                return message.IsModerator || message.IsBroadcaster;
-            }
-        }
-
     }
 }
