@@ -7,17 +7,17 @@ namespace TwitchBot
 
         public static IAuthenticator operator |(IAuthenticator lhs, IAuthenticator rhs)
         {
-            return new CombinedAuthenticator(lhs, rhs, (l, r, cm) =>
+            return new CombinedAuthenticator(lhs, rhs, (firstAuthenticator, secondAuthenticator, chatMessage) =>
             {
-                return l.Authenticate(cm) || r.Authenticate(cm);
+                return firstAuthenticator.Authenticate(chatMessage) || secondAuthenticator.Authenticate(chatMessage);
             });
         }
 
         public static IAuthenticator operator &(IAuthenticator lhs, IAuthenticator rhs)
         {
-            return new CombinedAuthenticator(lhs, rhs, (l, r, cm) =>
+            return new CombinedAuthenticator(lhs, rhs, (firstAuthenticator, secondAuthenticator, chatMessage) =>
             {
-                return l.Authenticate(cm) && r.Authenticate(cm);
+                return firstAuthenticator.Authenticate(chatMessage) && secondAuthenticator.Authenticate(chatMessage);
             });
         }
     }
