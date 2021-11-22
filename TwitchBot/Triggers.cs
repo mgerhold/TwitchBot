@@ -15,18 +15,22 @@ namespace TwitchBot {
 
         private class StartsWithWordTrigger : ITrigger {
             [JsonProperty] private String word;
+            [JsonProperty] private bool caseSensitive;
+
+            public StartsWithWordTrigger(String word, bool caseSensitive = false) {
+                this.word = word;
+                this.caseSensitive = caseSensitive;
+            }
 
             public String GetListRepresentation() {
                 return word;
             }
 
-            public StartsWithWordTrigger(String word) {
-                this.word = word;
-            }
-
             public bool ShouldTrigger(String message) {
                 var parts = message.Trim().Split(" ", 2);
-                return parts.Length > 0 && parts[0] == word;
+                return parts.Length > 0 && (
+                            parts[0] == word || (!caseSensitive && parts[0].ToUpper() == word.ToUpper())
+                       );
             }
         }
     }

@@ -10,6 +10,10 @@ namespace TwitchBot {
         public String Message { get; set; }
 
         protected override void InvokeImplementation(Bot bot, ChatMessage message) {
+            InvokeImplementation(bot);
+        }
+
+        protected override void InvokeImplementation(Bot bot) {            
             bot.SendMessage(Message);
         }
     }

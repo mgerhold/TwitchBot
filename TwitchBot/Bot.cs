@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -14,6 +15,7 @@ namespace TwitchBot {
         private Config config;
         private CommandList nativeCommands = new(); // commands that execute C# code
         private CommandList customCommands = PersistentCommandList.LoadOrCreate("commands.json"); // commands that can be set through the Twitch chat
+        private TimeSpan timedMessagesInterval = new TimeSpan(0, 25, 0);
 
         public Bot(Config config) {
             SetupNativeCommands();
@@ -35,6 +37,39 @@ namespace TwitchBot {
             client.Connect();
         }
 
+        private void HandleTimers() {
+            Command nextToInvoke = null;
+            DateTime timeOfLastInvocation = DateTime.MaxValue;
+            foreach (var command in nativeCommands.Commands.Concat(customCommands.Commands)) {
+                if (command.Interval is null) {
+                    continue;
+                }
+                if (command.LastInvoked is not null &&
+                    command.LastInvoked + timedMessagesInterval < DateTime.Now) {
+                    continue;
+                }
+                var lastInvoked = nextToInvoke is null ? command.LastInvoked : DateTime.MinValue;
+                if (lastInvoked < timeOfLastInvocation) {
+                    nextToInvoke = command;
+                    timeOfLastInvocation = lastInvoked.Value;
+                }
+            }
+            nextToInvoke?.Invoke(this);
+            nextToInvoke = null;
+            timeOfLastInvocation = DateTime.MaxValue;
+            foreach (var command in nativeCommands.Commands.Concat(customCommands.Commands)) {
+                if (command.Interval is null) {
+                    continue;
+                }
+                var lastInvoked = nextToInvoke is null ? command.LastInvoked : DateTime.MinValue;
+                if (lastInvoked < timeOfLastInvocation) {
+                    nextToInvoke = command;
+                    timeOfLastInvocation = lastInvoked.Value;
+                }
+            }
+            Thread.Sleep(nextToInvoke?.Interval ?? TimeSpan.FromSeconds(5));
+        }
+
         private bool Authenticate(ChatMessage message) {
             if (!message.IsModerator && !message.IsBroadcaster) {
                 SendMessage($"@{message.Username} Ah ah ah! Du hast das Zauberwort nicht gesagt! Ah ah ah!");
@@ -47,7 +82,7 @@ namespace TwitchBot {
             nativeCommands.Commands.Add(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!add"),
                 Authenticator = Authenticators.ModOrBroadcaster,
-                Handler = (bot, message) => {                    
+                Handler = (bot, message) => {
                     var parts = message.Message.Split(" ", 3);
                     if (parts.Length != 3) {
                         bot.SendMessage($"@{message.Username} Syntax: !add <trigger> <message>");

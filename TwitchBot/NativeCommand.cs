@@ -13,6 +13,10 @@ namespace TwitchBot {
         protected override void InvokeImplementation(Bot bot, ChatMessage message) {
             Handler(bot, message);
         }
+
+        protected override void InvokeImplementation(Bot bot) {            
+            Handler(bot, null);
+        }
     }
 
 }
