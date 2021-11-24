@@ -14,7 +14,6 @@ namespace TwitchBot {
                 Console.Error.WriteLine($"Unable to connect: {e.Message}");
                 Console.WriteLine("Press Enter to Quit");
             }
-            Console.ReadLine();
         }
     }
 }

@@ -7,14 +7,14 @@ using TwitchLib.Client.Models;
 namespace TwitchBot {
 
     class EchoCommand : Command {
-        public String Message { get; set; }
+        public String Response { get; set; }
 
         protected override void InvokeImplementation(Bot bot, ChatMessage message) {
-            InvokeImplementation(bot);
+            bot.SendMessage(ApplyPlaceholders(Response, message));
         }
 
         protected override void InvokeImplementation(Bot bot) {            
-            bot.SendMessage(Message);
+            bot.SendMessage(Response);
         }
     }
 

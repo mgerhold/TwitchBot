@@ -10,12 +10,13 @@ using TwitchLib.Communication.Models;
 
 namespace TwitchBot {
     class Bot {
-        private TwitchClient client;
+        private TwitchClient client = null;
         private bool logging = true; // output logging messages? gets automatically disabled on successful connect
-        private Config config;
+        private Config config = null;
         private CommandList nativeCommands = new(); // commands that execute C# code
-        private CommandList customCommands = PersistentCommandList.LoadOrCreate("commands.json"); // commands that can be set through the Twitch chat
-        private TimeSpan timedMessagesInterval = new TimeSpan(0, 25, 0);
+        private CommandList customCommands = PersistentCommandList.LoadOrCreate("commands.json"); // commands that can be set through the Twitch chat        
+        private Mutex commandListsMutex = new Mutex();
+        private Thread timedCommandsThread = null;
 
         public Bot(Config config) {
             SetupNativeCommands();
@@ -35,47 +36,42 @@ namespace TwitchBot {
             client.OnConnected += OnClientConnected;
 
             client.Connect();
+
+            timedCommandsThread = new Thread(new ThreadStart(HandleTimers));
+            timedCommandsThread.Start();
         }
 
         private void HandleTimers() {
-            Command nextToInvoke = null;
-            DateTime timeOfLastInvocation = DateTime.MaxValue;
-            foreach (var command in nativeCommands.Commands.Concat(customCommands.Commands)) {
-                if (command.Interval is null) {
-                    continue;
+            Console.WriteLine("Started thread to handle timers...");
+            while (true) { // approved by Andrei Alexandrescu
+                var sleepDuration = config.TimedMessagesInterval;
+                try {
+                    commandListsMutex.WaitOne();
+                    var allTimerCommands = nativeCommands.Commands
+                        .Concat(customCommands.Commands)
+                        .Where(command => command.IsTimer);
+                    if (allTimerCommands.All(command => command.LastInvoked + config.TimedMessagesInterval > DateTime.Now)) {
+                        var oldestCommand = allTimerCommands
+                            .OrderBy(command => command.LastInvoked)
+                            .FirstOrDefault();
+                        if (oldestCommand is not null) {
+                            sleepDuration = oldestCommand.LastInvoked + config.TimedMessagesInterval - DateTime.Now;
+                        }
+                    } else {
+                        var nextToInvoke = allTimerCommands
+                            .OrderBy(command => command.LastInvoked)
+                            .FirstOrDefault();
+                        if (nextToInvoke is not null) {
+                            Console.WriteLine("Invoking timed command!");
+                            nextToInvoke.Invoke(this);
+                        }
+                    }
+                } finally {
+                    commandListsMutex.ReleaseMutex();
                 }
-                if (command.LastInvoked is not null &&
-                    command.LastInvoked + timedMessagesInterval < DateTime.Now) {
-                    continue;
-                }
-                var lastInvoked = nextToInvoke is null ? command.LastInvoked : DateTime.MinValue;
-                if (lastInvoked < timeOfLastInvocation) {
-                    nextToInvoke = command;
-                    timeOfLastInvocation = lastInvoked.Value;
-                }
+                Console.WriteLine($"Timed command thread sleeping...");
+                Thread.Sleep(sleepDuration);
             }
-            nextToInvoke?.Invoke(this);
-            nextToInvoke = null;
-            timeOfLastInvocation = DateTime.MaxValue;
-            foreach (var command in nativeCommands.Commands.Concat(customCommands.Commands)) {
-                if (command.Interval is null) {
-                    continue;
-                }
-                var lastInvoked = nextToInvoke is null ? command.LastInvoked : DateTime.MinValue;
-                if (lastInvoked < timeOfLastInvocation) {
-                    nextToInvoke = command;
-                    timeOfLastInvocation = lastInvoked.Value;
-                }
-            }
-            Thread.Sleep(nextToInvoke?.Interval ?? TimeSpan.FromSeconds(5));
-        }
-
-        private bool Authenticate(ChatMessage message) {
-            if (!message.IsModerator && !message.IsBroadcaster) {
-                SendMessage($"@{message.Username} Ah ah ah! Du hast das Zauberwort nicht gesagt! Ah ah ah!");
-                return false;
-            }
-            return true;
         }
 
         private void SetupNativeCommands() {
@@ -88,12 +84,89 @@ namespace TwitchBot {
                         bot.SendMessage($"@{message.Username} Syntax: !add <trigger> <message>");
                         return;
                     }
+                    if (nativeCommands.Commands
+                            .Concat(customCommands.Commands)
+                            .Any(command => command.Trigger.ShouldTrigger(parts[2]))) {
+                        bot.SendMessage($"@{message.Username} This command would clash with another command!");
+                        return;
+                    }
                     customCommands.Add(new EchoCommand {
                         Trigger = Triggers.StartsWithWord(parts[1]),
-                        Message = parts[2],
+                        Response = parts[2],
                         Cooldown = TimeSpan.FromSeconds(29)
                     });
                     bot.SendMessage($"@{message.Username} Kommando {parts[1]} hinzugefügt!");
+                },
+                Cooldown = null
+            });
+            nativeCommands.Commands.Add(new NativeCommand {
+                Trigger = Triggers.StartsWithWord("!interval"),
+                Authenticator = Authenticators.Broadcaster,
+                Handler = (bot, message) => {
+                    bot.SendMessage($"@{message.Username} The current timer interval is {config.TimedMessagesInterval} minutes.");
+                },
+                Cooldown = null
+            });
+            nativeCommands.Commands.Add(new NativeCommand {
+                Trigger = Triggers.StartsWithWord("!setinterval"),
+                Authenticator = Authenticators.Broadcaster,
+                Handler = (bot, message) => {
+                    var parts = message.Message.Split(" ", 2);
+                    if (parts.Length != 2) {
+                        bot.SendMessage($"@{message.Username} Syntax: !setinterval <duration in minutes>");
+                        return;
+                    }
+                    if (!Int32.TryParse(parts[1], out var minutes)) {
+                        bot.SendMessage($"@{message.Username} \"{parts[1]}\" is not a valid integer!");
+                        return;
+                    }
+                    config.TimedMessagesInterval = TimeSpan.FromMinutes(minutes);
+                    bot.SendMessage($"@{message.Username} Timer interval set to {minutes}.");
+                    config.Save();
+                },
+                Cooldown = null
+            });
+            nativeCommands.Commands.Add(new NativeCommand {
+                Trigger = Triggers.StartsWithWord("!enabletimer"),
+                Authenticator = Authenticators.Broadcaster,
+                Handler = (bot, message) => {
+                    var parts = message.Message.Split(" ", 2);
+                    if (parts.Length != 2) {
+                        bot.SendMessage($"@{message.Username} Syntax: !enabletimer <trigger>");
+                        return;
+                    }
+                    var triggerString = parts[1];
+                    foreach (var command in customCommands.Commands) {
+                        if (command.Trigger.ShouldTrigger(triggerString)) {
+                            command.IsTimer = true;
+                            bot.SendMessage($"@{message.Username} Activated timer for {triggerString}");
+                            (customCommands as PersistentCommandList).Save();
+                            return;
+                        }
+                    }
+                    bot.SendMessage($"@{message.Username} No command found with trigger \"{triggerString}\"");
+                },
+                Cooldown = null
+            });
+            nativeCommands.Commands.Add(new NativeCommand {
+                Trigger = Triggers.StartsWithWord("!disabletimer"),
+                Authenticator = Authenticators.Broadcaster,
+                Handler = (bot, message) => {
+                    var parts = message.Message.Split(" ", 2);
+                    if (parts.Length != 2) {
+                        bot.SendMessage($"@{message.Username} Syntax: !disabletimer <trigger>");
+                        return;
+                    }
+                    var triggerString = parts[1];
+                    foreach (var command in customCommands.Commands) {
+                        if (command.Trigger.ShouldTrigger(triggerString)) {
+                            command.IsTimer = false;
+                            bot.SendMessage($"@{message.Username} Deactivated timer for {triggerString}");
+                            (customCommands as PersistentCommandList).Save();
+                            return;
+                        }
+                    }
+                    bot.SendMessage($"@{message.Username} No command found with trigger \"{triggerString}\"");
                 },
                 Cooldown = null
             });
@@ -147,11 +220,16 @@ namespace TwitchBot {
         }
 
         private bool HandleCommands(ChatMessage message) {
-            foreach (var command in nativeCommands.Commands.Concat(customCommands.Commands)) {
-                if (command.Trigger.ShouldTrigger(message)) {
-                    command.Invoke(this, message);
-                    return true;
+            try {
+                commandListsMutex.WaitOne();
+                foreach (var command in nativeCommands.Commands.Concat(customCommands.Commands)) {
+                    if (command.Trigger.ShouldTrigger(message)) {
+                        command.Invoke(this, message);
+                        return true;
+                    }
                 }
+            } finally {
+                commandListsMutex.ReleaseMutex();
             }
             return false;
         }
@@ -174,6 +252,10 @@ namespace TwitchBot {
             PrintUserMessage(config.Username, message,
                              message.StartsWith("/me"),
                              Color.BotHighlighted);
+            if (!client.IsConnected || client.JoinedChannels.Count == 0) {
+                Console.WriteLine($"Unable to send message since bot is not connected (message was {message})");
+                return;
+            }
             client.SendMessage(config.Channel, message);
         }
 

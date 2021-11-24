@@ -17,11 +17,6 @@ namespace TwitchBot {
             Commands.Remove(command);
         }
 
-        private String ApplyPlaceholders(String response) {
-            // TODO: implement
-            return response;
-        }
-
         public bool Handle(Bot bot, ChatMessage message) {
             foreach (var command in Commands) {
                 if (command.Trigger.ShouldTrigger(message)) {

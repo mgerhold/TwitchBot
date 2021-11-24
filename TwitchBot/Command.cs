@@ -9,12 +9,12 @@ namespace TwitchBot {
 
     abstract class Command {
         public TimeSpan? Cooldown { get; init; } = null;
-        public TimeSpan? Interval { get; init; } = null;
+        public bool IsTimer { get; set; } = false;
         public IAuthenticator Authenticator { get; init; } = Authenticators.Pleb;
         public ITrigger Trigger { get; init; } = null;
         public bool ModOverridesCooldown { get; init; } = true;
-        public DateTime? LastInvoked { get; private set; } = null;
-        private bool CooldownAllowsInvocation => !Cooldown.HasValue || !LastInvoked.HasValue || DateTime.Now >= LastInvoked + Cooldown;
+        public DateTime LastInvoked { get; private set; } = DateTime.MinValue;
+        private bool CooldownAllowsInvocation => !Cooldown.HasValue || DateTime.Now >= LastInvoked + Cooldown;
 
         private bool IsCooldownOverriden(ChatMessage message) {
             return message.IsBroadcaster || (message.IsModerator && ModOverridesCooldown);
@@ -22,6 +22,7 @@ namespace TwitchBot {
 
         public void Invoke(Bot bot, ChatMessage message = null) {
             if (message is null) {
+                LastInvoked = DateTime.Now;
                 InvokeImplementation(bot);
                 return;
             }
@@ -40,6 +41,26 @@ namespace TwitchBot {
             } else {
                 Console.WriteLine("Cannot invoke command since cooldown stuff");
             }
+        }
+
+        public static String ApplyPlaceholders(String response, ChatMessage message) {
+            var responseParts = response.Split(' ');
+            var originalMessageParts = message.Message.Split(' ');
+            Dictionary<String, String> placeholders = new() {
+                { "$user", message.Username }
+            };
+            for (int i = 0; i < responseParts.Length; i++) {
+                if (responseParts[i].StartsWith("$") &&
+                    UInt32.TryParse(responseParts[i].Substring(1), out var index)) {
+                    if (index > originalMessageParts.Length - 1) {
+                        continue;
+                    }
+                    responseParts[i] = originalMessageParts[index];
+                } else if (placeholders.ContainsKey(responseParts[i])) {
+                    responseParts[i] = placeholders[responseParts[i]];
+                }
+            }
+            return String.Join(" ", responseParts);
         }
 
         protected abstract void InvokeImplementation(Bot bot);

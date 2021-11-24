@@ -12,6 +12,7 @@ namespace TwitchBot {
         public String Username { get; set; }
         public String OAuthToken { get; set; }
         public String Channel { get; set; }
+        public TimeSpan TimedMessagesInterval { get; set; } = TimeSpan.FromMinutes(25);
 
         private const String filename = "config.json";
 
