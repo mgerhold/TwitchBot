@@ -53,7 +53,7 @@ namespace TwitchBot {
             }
         }
 
-        public override string Tostring() {
+        public override string ToString() {
             return $"User name: {Username}, Channel: {Channel}";
         }
     }

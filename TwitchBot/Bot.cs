@@ -264,9 +264,9 @@ namespace TwitchBot {
             color ??= Color.Default;
             color.Apply();
             if (isMe) {
-                Console.Write($"{DateTime.Now.Tostring("HH:mm:ss")}: {username} {message}");
+                Console.Write($"{DateTime.Now.ToString("HH:mm:ss")}: {username} {message}");
             } else {
-                Console.Write($"{DateTime.Now.Tostring("HH:mm:ss")} {username}: {message}");
+                Console.Write($"{DateTime.Now.ToString("HH:mm:ss")} {username}: {message}");
             }
             Color.Default.Apply();
             Console.WriteLine();
