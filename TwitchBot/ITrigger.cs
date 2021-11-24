@@ -7,7 +7,7 @@ using TwitchLib.Client.Models;
 
 namespace TwitchBot {
     internal interface ITrigger {
-        public String GetListRepresentation();
+        public string GetListRepresentation();
 
         public bool HasListRepresentation() {
             return GetListRepresentation() != null;
@@ -17,6 +17,6 @@ namespace TwitchBot {
             return ShouldTrigger(message.Message);
         }
 
-        public bool ShouldTrigger(String message);
+        public bool ShouldTrigger(string message);
     }
 }

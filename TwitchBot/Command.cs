@@ -43,15 +43,15 @@ namespace TwitchBot {
             }
         }
 
-        public static String ApplyPlaceholders(String response, ChatMessage message) {
+        public static string ApplyPlaceholders(string response, ChatMessage message) {
             var responseParts = response.Split(' ');
             var originalMessageParts = message.Message.Split(' ');
-            Dictionary<String, String> placeholders = new() {
+            Dictionary<string, string> placeholders = new() {
                 { "$user", message.Username }
             };
             for (int i = 0; i < responseParts.Length; i++) {
                 if (responseParts[i].StartsWith("$") &&
-                    UInt32.TryParse(responseParts[i].Substring(1), out var index)) {
+                    uint.TryParse(responseParts[i].Substring(1), out var index)) {
                     if (index > originalMessageParts.Length - 1) {
                         continue;
                     }
@@ -60,7 +60,7 @@ namespace TwitchBot {
                     responseParts[i] = placeholders[responseParts[i]];
                 }
             }
-            return String.Join(" ", responseParts);
+            return string.Join(" ", responseParts);
         }
 
         protected abstract void InvokeImplementation(Bot bot);

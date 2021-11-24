@@ -116,7 +116,7 @@ namespace TwitchBot {
                         bot.SendMessage($"@{message.Username} Syntax: !setinterval <duration in minutes>");
                         return;
                     }
-                    if (!Int32.TryParse(parts[1], out var minutes)) {
+                    if (!int.TryParse(parts[1], out var minutes)) {
                         bot.SendMessage($"@{message.Username} \"{parts[1]}\" is not a valid integer!");
                         return;
                     }
@@ -135,16 +135,16 @@ namespace TwitchBot {
                         bot.SendMessage($"@{message.Username} Syntax: !enabletimer <trigger>");
                         return;
                     }
-                    var triggerString = parts[1];
+                    var triggerstring = parts[1];
                     foreach (var command in customCommands.Commands) {
-                        if (command.Trigger.ShouldTrigger(triggerString)) {
+                        if (command.Trigger.ShouldTrigger(triggerstring)) {
                             command.IsTimer = true;
-                            bot.SendMessage($"@{message.Username} Activated timer for {triggerString}");
+                            bot.SendMessage($"@{message.Username} Activated timer for {triggerstring}");
                             (customCommands as PersistentCommandList).Save();
                             return;
                         }
                     }
-                    bot.SendMessage($"@{message.Username} No command found with trigger \"{triggerString}\"");
+                    bot.SendMessage($"@{message.Username} No command found with trigger \"{triggerstring}\"");
                 },
                 Cooldown = null
             });
@@ -157,16 +157,16 @@ namespace TwitchBot {
                         bot.SendMessage($"@{message.Username} Syntax: !disabletimer <trigger>");
                         return;
                     }
-                    var triggerString = parts[1];
+                    var triggerstring = parts[1];
                     foreach (var command in customCommands.Commands) {
-                        if (command.Trigger.ShouldTrigger(triggerString)) {
+                        if (command.Trigger.ShouldTrigger(triggerstring)) {
                             command.IsTimer = false;
-                            bot.SendMessage($"@{message.Username} Deactivated timer for {triggerString}");
+                            bot.SendMessage($"@{message.Username} Deactivated timer for {triggerstring}");
                             (customCommands as PersistentCommandList).Save();
                             return;
                         }
                     }
-                    bot.SendMessage($"@{message.Username} No command found with trigger \"{triggerString}\"");
+                    bot.SendMessage($"@{message.Username} No command found with trigger \"{triggerstring}\"");
                 },
                 Cooldown = null
             });
@@ -194,14 +194,14 @@ namespace TwitchBot {
             nativeCommands.Commands.Add(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!list"),
                 Handler = (bot, message) => {
-                    var listString = nativeCommands.Commands
+                    var liststring = nativeCommands.Commands
                             .Concat(customCommands.Commands)
                             .Where(command => command.Trigger.HasListRepresentation())
                             .Where(command => command.Authenticator.Authenticate(message))
                             .Select(command => command.Trigger.GetListRepresentation())
-                            .OrderBy(representationString => representationString)
+                            .OrderBy(representationstring => representationstring)
                             .Aggregate((previous, toAppend) => $"{previous} {toAppend}");
-                    bot.SendMessage($"@{message.Username} Verfügbare Kommandos: {listString}");
+                    bot.SendMessage($"@{message.Username} Verfügbare Kommandos: {liststring}");
                 },
                 Cooldown = TimeSpan.FromSeconds(30)
             });
@@ -248,7 +248,7 @@ namespace TwitchBot {
             Console.WriteLine($"Connected to {args.AutoJoinChannel}");
         }
 
-        public void SendMessage(String message) {
+        public void SendMessage(string message) {
             PrintUserMessage(config.Username, message,
                              message.StartsWith("/me"),
                              Color.BotHighlighted);
@@ -259,14 +259,14 @@ namespace TwitchBot {
             client.SendMessage(config.Channel, message);
         }
 
-        private void PrintUserMessage(String username, String message, bool isMe = false,
+        private void PrintUserMessage(string username, string message, bool isMe = false,
                                       Color color = null) {
             color ??= Color.Default;
             color.Apply();
             if (isMe) {
-                Console.Write($"{DateTime.Now.ToString("HH:mm:ss")}: {username} {message}");
+                Console.Write($"{DateTime.Now.Tostring("HH:mm:ss")}: {username} {message}");
             } else {
-                Console.Write($"{DateTime.Now.ToString("HH:mm:ss")} {username}: {message}");
+                Console.Write($"{DateTime.Now.Tostring("HH:mm:ss")} {username}: {message}");
             }
             Color.Default.Apply();
             Console.WriteLine();

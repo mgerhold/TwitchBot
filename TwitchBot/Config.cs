@@ -9,12 +9,12 @@ using System.Threading.Tasks;
 namespace TwitchBot {
 
     class Config {
-        public String Username { get; set; }
-        public String OAuthToken { get; set; }
-        public String Channel { get; set; }
+        public string Username { get; set; }
+        public string OAuthToken { get; set; }
+        public string Channel { get; set; }
         public TimeSpan TimedMessagesInterval { get; set; } = TimeSpan.FromMinutes(25);
 
-        private const String filename = "config.json";
+        private const string filename = "config.json";
 
         public static Config LoadOrDefault() {
             if (File.Exists(filename)) {
@@ -31,7 +31,7 @@ namespace TwitchBot {
         }
 
         public static Config Load() {
-            String lines;
+            string lines;
             try {
                 lines = File.ReadAllText(filename);                
             } catch (Exception e) {
@@ -45,15 +45,15 @@ namespace TwitchBot {
         }
 
         public void Save() {
-            String jsonString = JsonConvert.SerializeObject(this, Formatting.Indented);
+            string jsonstring = JsonConvert.SerializeObject(this, Formatting.Indented);
             try {
-                File.WriteAllText(filename, jsonString);
+                File.WriteAllText(filename, jsonstring);
             } catch (Exception e) {
                 throw new Exception("Unable to write configuration file", e);
             }
         }
 
-        public override string ToString() {
+        public override string Tostring() {
             return $"User name: {Username}, Channel: {Channel}";
         }
     }

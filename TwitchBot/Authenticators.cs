@@ -13,7 +13,7 @@ namespace TwitchBot {
         public static IAuthenticator Broadcaster { get; } = new BroadcasterAuthenticator();
         public static IAuthenticator ModOrBroadcaster { get; } = Mod | Broadcaster;
 
-        public static IAuthenticator SingleUser(String userId) {
+        public static IAuthenticator SingleUser(string userId) {
             return new SingleUserAuthenticator(userId);
         }
 
@@ -36,9 +36,9 @@ namespace TwitchBot {
         }
 
         private class SingleUserAuthenticator : IAuthenticator {
-            private String userID;
+            private string userID;
 
-            public SingleUserAuthenticator(String userID) {
+            public SingleUserAuthenticator(string userID) {
                 this.userID = userID;
             }
 

@@ -7,14 +7,14 @@ using TwitchLib.Client.Models;
 namespace TwitchBot {
     class PersistentCommandList : CommandList {
 
-        private PersistentCommandList(String filename, List<Command> commands) {
+        private PersistentCommandList(string filename, List<Command> commands) {
             this.filename = filename;
             Commands = commands;
         }
 
-        private String filename;
+        private string filename;
 
-        public static PersistentCommandList LoadOrCreate(String filename) {
+        public static PersistentCommandList LoadOrCreate(string filename) {
             if (File.Exists(filename)) {
                 return Load(filename);
             }
@@ -24,8 +24,8 @@ namespace TwitchBot {
             return result;
         }
 
-        public static PersistentCommandList Load(String filename) {
-            String lines;
+        public static PersistentCommandList Load(string filename) {
+            string lines;
             try {
                 lines = File.ReadAllText(filename);
             } catch (Exception e) {
