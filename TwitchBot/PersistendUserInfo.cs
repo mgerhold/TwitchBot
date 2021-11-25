@@ -17,6 +17,8 @@ namespace TwitchBot
 
         public PointSystemSettings Settings = new PointSystemSettings();
 
+        private object writeLock = new object();
+
         public PersistendUserInfo(string filename, List<UserInfo> userInfos)
         {
             this.filename = filename;
@@ -29,7 +31,7 @@ namespace TwitchBot
             {
                 return Load(filename);
             }
-            Console.WriteLine("Creating new empty commands list");
+            Console.WriteLine("Creating new empty userinfo list");
             var result = new PersistendUserInfo(filename, new List<UserInfo>());
             result.Save();
             return result;
@@ -61,13 +63,17 @@ namespace TwitchBot
 
         public void Save()
         {
+
             try
             {
-                File.WriteAllText(filename, JsonConvert.SerializeObject(UserInfos, Formatting.Indented,
-                    new JsonSerializerSettings
-                    {
-                        TypeNameHandling = TypeNameHandling.All
-                    }));
+                lock (writeLock)
+                {
+                    File.WriteAllText(filename, JsonConvert.SerializeObject(UserInfos, Formatting.Indented,
+                        new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.All
+                        }));
+                }
             }
             catch (Exception e)
             {
@@ -108,6 +114,7 @@ namespace TwitchBot
                 userInfo.LastPointSet = DateTime.Now;
 
                 Save();
+                Console.WriteLine($"Points added to {userId}");
             }
         }
 
@@ -124,9 +131,11 @@ namespace TwitchBot
             }
 
             Save();
+
+            Console.WriteLine($"Points removed from {userId}");
         }
 
-        private UserInfo GetUserInfo(string userId)
+        public UserInfo GetUserInfo(string userId)
         {
             return (from userInfo in UserInfos
                    where userInfo.UserId == userId

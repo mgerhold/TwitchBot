@@ -39,8 +39,6 @@ namespace TwitchBot {
             client.OnMessageReceived += OnClientMessageReceived;
             client.OnConnected += OnClientConnected;
 
-            client.OnUserJoined += OnUserJoined;
-
             client.Connect();
 
             timedCommandsThread = new Thread(new ThreadStart(HandleTimers));
@@ -55,19 +53,18 @@ namespace TwitchBot {
             Console.WriteLine("Started thread to handle points...");
 
             while (true)
-            { 
-                
+            {
                 try
                 {
                     userInfoListsMutex.WaitOne();
 
-                    var userToAddPoints = PersistendUserInfo.Instance.UserInfos
-                        .Where(userInfo => 
-                            userInfo.LastPointSet + PersistendUserInfo.Instance.Settings.PointGivingDelay >= DateTime.Now);
+                    var userToAddPoints = PersistendUserInfo.Instance.UserInfos;
 
-                    if (userToAddPoints.Any())
+                    for (int i = 0; i < userToAddPoints.Count; i++)
                     {
-                        foreach (var userInfo in userToAddPoints)
+                        UserInfo userInfo = userToAddPoints[i];
+
+                        if (userInfo.LastPointSet + PersistendUserInfo.Instance.Settings.PointGivingDelay < DateTime.Now)
                         {
                             PersistendUserInfo.Instance.AddPointsTo(userInfo.UserId, PersistendUserInfo.Instance.Settings.UserTimedAmount);
                         }
@@ -77,12 +74,9 @@ namespace TwitchBot {
                 {
                     userInfoListsMutex.ReleaseMutex();
                 }
-            }
-        }
 
-        private void OnUserJoined(object sender, OnUserJoinedArgs e)
-        {
-            PersistendUserInfo.Instance.AddPointsTo(e.Username, PersistendUserInfo.Instance.Settings.UserJoinAmount);
+                Thread.Sleep(TimeSpan.FromSeconds(5));
+            }
         }
 
         private void HandleTimers() {
@@ -119,6 +113,8 @@ namespace TwitchBot {
         }
 
         private void SetupNativeCommands() {
+            nativeCommands.Add(new MyPointsCommand());
+
             nativeCommands.Commands.Add(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!add"),
                 Authenticator = Authenticators.ModOrBroadcaster,
@@ -260,7 +256,7 @@ namespace TwitchBot {
 
         private void OnClientJoinedChannel(object sender, OnJoinedChannelArgs args) {
             logging = false;
-            SendMessage("Achtung, Achtung, der persönliche Bedienstete von Lord coder2k ist eingetroffen!");
+            //SendMessage("Achtung, Achtung, der persönliche Bedienstete von Lord coder2k ist eingetroffen!");
         }
 
         private bool HandleCommands(ChatMessage message) {
@@ -286,17 +282,24 @@ namespace TwitchBot {
             if (HandleCommands(args.ChatMessage)) {
                 Console.WriteLine("Handled command");
             }
+
+            if(PersistendUserInfo.Instance.GetUserInfo(args.ChatMessage.UserId) is null)
+            {
+                PersistendUserInfo.Instance.AddPointsTo(args.ChatMessage.UserId, PersistendUserInfo.Instance.Settings.UserJoinAmount);
+            }
         }
 
         private void OnClientConnected(object sender, OnConnectedArgs args) {
             Console.WriteLine($"Connected to {args.AutoJoinChannel}");
         }
 
-        public void SendMessage(string message) {
+        public void SendMessage(string message)
+        {
             PrintUserMessage(config.Username, message,
                              message.StartsWith("/me"),
                              Color.BotHighlighted);
-            if (!client.IsConnected || client.JoinedChannels.Count == 0) {
+            if (!client.IsConnected || client.JoinedChannels.Count == 0)
+            {
                 Console.WriteLine($"Unable to send message since bot is not connected (message was {message})");
                 return;
             }
