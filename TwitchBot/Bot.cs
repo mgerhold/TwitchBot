@@ -18,7 +18,9 @@ namespace TwitchBot {
         private CommandList nativeCommands = new(); // commands that execute C# code
         private CommandList customCommands = PersistentCommandList.LoadOrCreate("commands.json"); // commands that can be set through the Twitch chat        
         private Mutex commandListsMutex = new Mutex();
+        private Mutex userInfoListsMutex = new Mutex();
         private Thread timedCommandsThread = null;
+        private Thread timedPointsThread = null;
 
         public Bot(Config config) {
             SetupNativeCommands();
@@ -37,10 +39,50 @@ namespace TwitchBot {
             client.OnMessageReceived += OnClientMessageReceived;
             client.OnConnected += OnClientConnected;
 
+            client.OnUserJoined += OnUserJoined;
+
             client.Connect();
 
             timedCommandsThread = new Thread(new ThreadStart(HandleTimers));
             timedCommandsThread.Start();
+
+            timedPointsThread = new Thread(new ThreadStart(HandlePoints));
+            timedPointsThread.Start();
+        }
+
+        private void HandlePoints()
+        {
+            Console.WriteLine("Started thread to handle points...");
+
+            while (true)
+            { 
+                
+                try
+                {
+                    userInfoListsMutex.WaitOne();
+
+                    var userToAddPoints = PersistendUserInfo.Instance.UserInfos
+                        .Where(userInfo => 
+                            userInfo.LastPointSet + PersistendUserInfo.Instance.Settings.PointGivingDelay >= DateTime.Now);
+
+                    if (userToAddPoints.Any())
+                    {
+                        foreach (var userInfo in userToAddPoints)
+                        {
+                            PersistendUserInfo.Instance.AddPointsTo(userInfo.UserId, PersistendUserInfo.Instance.Settings.UserTimedAmount);
+                        }
+                    }
+                }
+                finally
+                {
+                    userInfoListsMutex.ReleaseMutex();
+                }
+            }
+        }
+
+        private void OnUserJoined(object sender, OnUserJoinedArgs e)
+        {
+            PersistendUserInfo.Instance.AddPointsTo(e.Username, PersistendUserInfo.Instance.Settings.UserJoinAmount);
         }
 
         private void HandleTimers() {

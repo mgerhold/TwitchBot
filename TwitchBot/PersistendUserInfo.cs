@@ -15,6 +15,8 @@ namespace TwitchBot
 
         private string filename;
 
+        public PointSystemSettings Settings = new PointSystemSettings();
+
         public PersistendUserInfo(string filename, List<UserInfo> userInfos)
         {
             this.filename = filename;
@@ -86,22 +88,27 @@ namespace TwitchBot
 
         public void AddPointsTo(string userId, int points = 1)
         {
-            var userInfo = GetUserInfo(userId);
-
-            if (userInfo is not null)
+            if (points > 0)
             {
-                userInfo.Points += points;
-            }
-            else
-            {
-                userInfo = new UserInfo();
-                userInfo.Points = points;
-                userInfo.UserId = userId;
+                var userInfo = GetUserInfo(userId);
 
-                UserInfos.Add(userInfo);
-            }
+                if (userInfo is not null)
+                {
+                    userInfo.Points += points;
+                }
+                else
+                {
+                    userInfo = new UserInfo();
+                    userInfo.Points = points;
+                    userInfo.UserId = userId;
 
-            Save();
+                    UserInfos.Add(userInfo);
+                }
+
+                userInfo.LastPointSet = DateTime.Now;
+
+                Save();
+            }
         }
 
         public void RemovePointsFrom(string userId, int points = 1)

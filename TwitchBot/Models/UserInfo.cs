@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 
 namespace TwitchBot.Models
 {
@@ -6,6 +7,7 @@ namespace TwitchBot.Models
     {
         [JsonProperty] public int Points;
         [JsonProperty] public string UserId;
+        [JsonProperty] public DateTime LastPointSet;
 
     }
 }
