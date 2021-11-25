@@ -122,7 +122,7 @@ namespace TwitchBot
         private UserInfo GetUserInfo(string userId)
         {
             return (from userInfo in UserInfos
-                   where userInfo.userId == userId
+                   where userInfo.UserId == userId
                    select userInfo).FirstOrDefault();
         }
     }
