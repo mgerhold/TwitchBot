@@ -96,7 +96,7 @@ namespace TwitchBot
             {
                 userInfo = new UserInfo();
                 userInfo.Points = points;
-                userInfo.userId = userId;
+                userInfo.UserId = userId;
 
                 UserInfos.Add(userInfo);
             }
