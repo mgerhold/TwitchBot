@@ -9,6 +9,8 @@ namespace TwitchBot
 {
     public class PersistendUserInfo
     {
+        public static PersistendUserInfo Instance = PersistendUserInfo.LoadOrCreate("userInfo.json");
+
         public List<UserInfo> UserInfos;
 
         private string filename;
@@ -71,9 +73,9 @@ namespace TwitchBot
             }
         }
 
-        public int GetPointsOf(string username)
+        public int GetPointsOf(string userId)
         {
-            var userInfo = GetUserInfo(username);
+            var userInfo = GetUserInfo(userId);
 
             if(userInfo is not null) {
                 return userInfo.Points;
@@ -82,9 +84,9 @@ namespace TwitchBot
             return 0;
         }
 
-        public void AddPointsTo(string username, int points = 1)
+        public void AddPointsTo(string userId, int points = 1)
         {
-            var userInfo = GetUserInfo(username);
+            var userInfo = GetUserInfo(userId);
 
             if (userInfo is not null)
             {
@@ -94,7 +96,7 @@ namespace TwitchBot
             {
                 userInfo = new UserInfo();
                 userInfo.Points = points;
-                userInfo.Username = username;
+                userInfo.userId = userId;
 
                 UserInfos.Add(userInfo);
             }
@@ -102,25 +104,25 @@ namespace TwitchBot
             Save();
         }
 
-        public void RemovePointsFrom(string username, int points = 1)
+        public void RemovePointsFrom(string userId, int points = 1)
         {
-            var userInfo = GetUserInfo(username);
+            var userInfo = GetUserInfo(userId);
 
             if (userInfo is not null && userInfo.Points >= points)
             {
                 userInfo.Points -= points;
             }
             else {
-                throw new Exception($"{username} has no Points to use");
+                throw new Exception($"{userId} has no Points to use");
             }
 
             Save();
         }
 
-        private UserInfo GetUserInfo(string username)
+        private UserInfo GetUserInfo(string userId)
         {
             return (from userInfo in UserInfos
-                   where userInfo.Username == username
+                   where userInfo.userId == userId
                    select userInfo).FirstOrDefault();
         }
     }
