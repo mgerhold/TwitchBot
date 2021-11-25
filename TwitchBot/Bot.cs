@@ -7,6 +7,8 @@ using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Models;
+using TwitchBot.Commands;
+using TwitchBot.Models;
 
 namespace TwitchBot {
     class Bot {

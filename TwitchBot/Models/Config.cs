@@ -5,8 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TwitchBot.Models;
+using TwitchBot;
 
-namespace TwitchBot {
+namespace TwitchBot.Models
+{
 
     class Config {
         public string Username { get; set; }

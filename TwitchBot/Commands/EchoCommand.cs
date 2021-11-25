@@ -1,21 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TwitchLib.Client.Models;
+using TwitchBot;
 
-namespace TwitchBot {
+namespace TwitchBot.Commands
+{
 
-    class NativeCommand : Command {
-        public Action<Bot, ChatMessage> Handler { private get; init; }
+    class EchoCommand : Command {
+        public string Response { get; set; }
 
         protected override void InvokeImplementation(Bot bot, ChatMessage message) {
-            Handler(bot, message);
+            bot.SendMessage(ApplyPlaceholders(Response, message));
         }
 
         protected override void InvokeImplementation(Bot bot) {            
-            Handler(bot, null);
+            bot.SendMessage(Response);
         }
     }
 
