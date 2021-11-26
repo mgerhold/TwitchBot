@@ -387,7 +387,6 @@ FodyWeavers.xsd
 .idea/
 *.sln.iml
 
-.editorconfig
 commands.json
 config.json
 TwitchBot/Properties/launchSettings.json
