@@ -1,7 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using TwitchBot.Commands;
+using TwitchBot.Models;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -17,6 +18,8 @@ namespace TwitchBot {
         private CommandList customCommands = PersistentCommandList.LoadOrCreate("commands.json"); // commands that can be set through the Twitch chat        
         private Mutex commandListsMutex = new Mutex();
         private Thread timedCommandsThread = null;
+        private PointSystem pointSystemManager = new PointSystem();
+
 
         public Bot(Config config) {
             SetupNativeCommands();
@@ -33,12 +36,15 @@ namespace TwitchBot {
             client.OnLog += OnClientLog;
             client.OnJoinedChannel += OnClientJoinedChannel;
             client.OnMessageReceived += OnClientMessageReceived;
-            client.OnConnected += OnClientConnected;
+            client.OnConnected += OnConnected;
+            client.OnUserJoined += OnUserJoined;
 
             client.Connect();
 
             timedCommandsThread = new Thread(new ThreadStart(HandleTimers));
             timedCommandsThread.Start();
+
+            pointSystemManager.Init(client, this);
         }
 
         private void HandleTimers() {
@@ -75,7 +81,7 @@ namespace TwitchBot {
         }
 
         private void SetupNativeCommands() {
-            nativeCommands.Commands.Add(new NativeCommand {
+            AddNativeCommand(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!add"),
                 Authenticator = Authenticators.ModOrBroadcaster,
                 Handler = (bot, message) => {
@@ -99,7 +105,7 @@ namespace TwitchBot {
                 },
                 Cooldown = null
             });
-            nativeCommands.Commands.Add(new NativeCommand {
+            AddNativeCommand(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!interval"),
                 Authenticator = Authenticators.Broadcaster,
                 Handler = (bot, message) => {
@@ -107,7 +113,7 @@ namespace TwitchBot {
                 },
                 Cooldown = null
             });
-            nativeCommands.Commands.Add(new NativeCommand {
+            AddNativeCommand(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!setinterval"),
                 Authenticator = Authenticators.Broadcaster,
                 Handler = (bot, message) => {
@@ -126,7 +132,7 @@ namespace TwitchBot {
                 },
                 Cooldown = null
             });
-            nativeCommands.Commands.Add(new NativeCommand {
+            AddNativeCommand(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!enabletimer"),
                 Authenticator = Authenticators.Broadcaster,
                 Handler = (bot, message) => {
@@ -148,7 +154,7 @@ namespace TwitchBot {
                 },
                 Cooldown = null
             });
-            nativeCommands.Commands.Add(new NativeCommand {
+            AddNativeCommand(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!disabletimer"),
                 Authenticator = Authenticators.Broadcaster,
                 Handler = (bot, message) => {
@@ -170,7 +176,7 @@ namespace TwitchBot {
                 },
                 Cooldown = null
             });
-            nativeCommands.Commands.Add(new NativeCommand {
+            AddNativeCommand(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!remove"),
                 Authenticator = Authenticators.ModOrBroadcaster,
                 Handler = (bot, message) => {
@@ -191,7 +197,7 @@ namespace TwitchBot {
                 },
                 Cooldown = null
             });
-            nativeCommands.Commands.Add(new NativeCommand {
+            AddNativeCommand(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!list"),
                 Handler = (bot, message) => {
                     var liststring = nativeCommands.Commands
@@ -205,6 +211,10 @@ namespace TwitchBot {
                 },
                 Cooldown = TimeSpan.FromSeconds(30)
             });
+        }
+
+        public void AddNativeCommand(Command command) {
+            nativeCommands.Commands.Add(command);
         }
 
         private void OnClientLog(object sender, OnLogArgs args) {
@@ -242,10 +252,16 @@ namespace TwitchBot {
             if (HandleCommands(args.ChatMessage)) {
                 Console.WriteLine("Handled command");
             }
+
+            pointSystemManager.HandleFirstMessage(args.ChatMessage);
         }
 
-        private void OnClientConnected(object sender, OnConnectedArgs args) {
+        private void OnConnected(object sender, OnConnectedArgs args) {
             Console.WriteLine($"Connected to {args.AutoJoinChannel}");
+        }
+
+        private void OnUserJoined(object sender, OnUserJoinedArgs args) {
+            // TODO: find user id by username and add to persistent user info storage
         }
 
         public void SendMessage(string message) {
