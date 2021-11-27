@@ -18,9 +18,9 @@ namespace TwitchBot {
         private CommandList nativeCommands = new(); // commands that execute C# code
         private CommandList customCommands = PersistentCommandList.LoadOrCreate("commands.json"); // commands that can be set through the Twitch chat        
         private Mutex commandListsMutex = new Mutex();
-        private Mutex userInfoListsMutex = new Mutex();
         private Thread timedCommandsThread = null;
-        private Thread timedPointsThread = null;
+        private PointSystemManager pointSystemManager = new PointSystemManager();
+        
 
         public Bot(Config config) {
             SetupNativeCommands();
@@ -44,38 +44,7 @@ namespace TwitchBot {
             timedCommandsThread = new Thread(new ThreadStart(HandleTimers));
             timedCommandsThread.Start();
 
-            timedPointsThread = new Thread(new ThreadStart(HandlePoints));
-            timedPointsThread.Start();
-        }
-
-        private void HandlePoints() {
-            Console.WriteLine("Started thread to handle points...");
-
-            while (true)
-            {
-                try
-                {
-                    userInfoListsMutex.WaitOne();
-
-                    var userToAddPoints = PersistendUserInfo.Instance.UserInfos;
-
-                    for (int i = 0; i < userToAddPoints.Count; i++)
-                    {
-                        UserInfo userInfo = userToAddPoints[i];
-
-                        if (userInfo.LastPointSet + PersistendUserInfo.Instance.Settings.PointGivingDelay < DateTime.Now)
-                        {
-                            PersistendUserInfo.Instance.AddPointsTo(userInfo.UserId, PersistendUserInfo.Instance.Settings.UserTimedAmount);
-                        }
-                    }
-                }
-                finally
-                {
-                    userInfoListsMutex.ReleaseMutex();
-                }
-
-                Thread.Sleep(TimeSpan.FromSeconds(5));
-            }
+            pointSystemManager.Init(client, this);
         }
 
         private void HandleTimers() {
@@ -112,8 +81,6 @@ namespace TwitchBot {
         }
 
         private void SetupNativeCommands() {
-            nativeCommands.Add(new MyPointsCommand());
-
             nativeCommands.Commands.Add(new NativeCommand {
                 Trigger = Triggers.StartsWithWord("!add"),
                 Authenticator = Authenticators.ModOrBroadcaster,
@@ -246,6 +213,10 @@ namespace TwitchBot {
             });
         }
 
+        public void AddCommand(Command myPointsCommand) {
+            nativeCommands.Commands.Add(myPointsCommand);
+        }
+
         private void OnClientLog(object sender, OnLogArgs args) {
             if (!logging) {
                 return;
@@ -282,10 +253,7 @@ namespace TwitchBot {
                 Console.WriteLine("Handled command");
             }
 
-            if(PersistendUserInfo.Instance.GetUserInfo(args.ChatMessage.UserId) is null)
-            {
-                PersistendUserInfo.Instance.AddPointsTo(args.ChatMessage.UserId, PersistendUserInfo.Instance.Settings.UserJoinAmount);
-            }
+            pointSystemManager.HandleFirstMessage(args.ChatMessage);
         }
 
         private void OnClientConnected(object sender, OnConnectedArgs args) {
