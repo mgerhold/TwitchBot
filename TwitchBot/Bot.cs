@@ -7,6 +7,8 @@ using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Models;
+using TwitchBot.Commands;
+using TwitchBot.Models;
 
 namespace TwitchBot {
     class Bot {
@@ -17,6 +19,8 @@ namespace TwitchBot {
         private CommandList customCommands = PersistentCommandList.LoadOrCreate("commands.json"); // commands that can be set through the Twitch chat        
         private Mutex commandListsMutex = new Mutex();
         private Thread timedCommandsThread = null;
+        private PointSystemManager pointSystemManager = new PointSystemManager();
+        
 
         public Bot(Config config) {
             SetupNativeCommands();
@@ -39,6 +43,8 @@ namespace TwitchBot {
 
             timedCommandsThread = new Thread(new ThreadStart(HandleTimers));
             timedCommandsThread.Start();
+
+            pointSystemManager.Init(client, this);
         }
 
         private void HandleTimers() {
@@ -207,6 +213,10 @@ namespace TwitchBot {
             });
         }
 
+        public void AddCommand(Command myPointsCommand) {
+            nativeCommands.Commands.Add(myPointsCommand);
+        }
+
         private void OnClientLog(object sender, OnLogArgs args) {
             if (!logging) {
                 return;
@@ -242,6 +252,8 @@ namespace TwitchBot {
             if (HandleCommands(args.ChatMessage)) {
                 Console.WriteLine("Handled command");
             }
+
+            pointSystemManager.HandleFirstMessage(args.ChatMessage);
         }
 
         private void OnClientConnected(object sender, OnConnectedArgs args) {
@@ -252,7 +264,8 @@ namespace TwitchBot {
             PrintUserMessage(config.Username, message,
                              message.StartsWith("/me"),
                              Color.BotHighlighted);
-            if (!client.IsConnected || client.JoinedChannels.Count == 0) {
+            if (!client.IsConnected || client.JoinedChannels.Count == 0)
+            {
                 Console.WriteLine($"Unable to send message since bot is not connected (message was {message})");
                 return;
             }

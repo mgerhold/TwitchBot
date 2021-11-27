@@ -17,6 +17,10 @@ namespace TwitchBot {
             return new SingleUserAuthenticator(userId);
         }
 
+        public static IAuthenticator Points(int points) {
+            return new UserPointAuthenticator(points);
+        }
+
         private class ModAuthenticator : IAuthenticator {
             public bool Authenticate(ChatMessage message) {
                 return message.IsModerator;
@@ -35,15 +39,32 @@ namespace TwitchBot {
             }
         }
 
-        private class SingleUserAuthenticator : IAuthenticator {
+        private class SingleUserAuthenticator : IAuthenticator
+        {
             private string userID;
 
-            public SingleUserAuthenticator(string userID) {
+            public SingleUserAuthenticator(string userID)
+            {
                 this.userID = userID;
             }
 
-            public bool Authenticate(ChatMessage message) {
+            public bool Authenticate(ChatMessage message)
+            {
                 return message.UserId == userID;
+            }
+        }
+
+        private class UserPointAuthenticator : IAuthenticator {
+            private int points;
+
+            public UserPointAuthenticator(int points) {
+                this.points = points;
+            }
+
+            public bool Authenticate(ChatMessage message) {
+                var userPoints = PersistendUserInfo.Instance.GetPointsOf(message.UserId);
+
+                return userPoints >= points;
             }
         }
     }

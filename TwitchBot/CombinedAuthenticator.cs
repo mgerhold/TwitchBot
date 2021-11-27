@@ -3,8 +3,7 @@ using TwitchLib.Client.Models;
 
 namespace TwitchBot
 {
-    internal class CombinedAuthenticator : IAuthenticator
-    {
+    internal class CombinedAuthenticator : IAuthenticator {
         private IAuthenticator lhs;
         private IAuthenticator rhs;
         readonly Func<IAuthenticator, IAuthenticator, ChatMessage, bool> callback;
