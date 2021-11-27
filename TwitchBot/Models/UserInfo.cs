@@ -3,8 +3,7 @@ using System;
 
 namespace TwitchBot.Models
 {
-    public class UserInfo
-    {
+    public class UserInfo {
         [JsonProperty] public int Points;
         [JsonProperty] public string UserId;
         [JsonProperty] public DateTime LastPointSet = DateTime.MinValue;

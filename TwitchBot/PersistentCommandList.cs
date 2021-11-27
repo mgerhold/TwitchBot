@@ -51,6 +51,16 @@ namespace TwitchBot {
             }
         }
 
+        public override void Add(Command command) {
+            base.Add(command);
+            Save();
+        }
+
+        public override void Remove(Command command) {
+            base.Remove(command);
+            Save();
+        }
+
     }
 
 }

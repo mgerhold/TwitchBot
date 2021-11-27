@@ -7,8 +7,7 @@ using System.Linq;
 
 namespace TwitchBot
 {
-    public class PersistendUserInfo
-    {
+    public class PersistendUserInfo {
         public static PersistendUserInfo Instance = PersistendUserInfo.LoadOrCreate("userInfo.json");
 
         public List<UserInfo> UserInfos;
@@ -19,14 +18,12 @@ namespace TwitchBot
 
         private object writeLock = new object();
 
-        public PersistendUserInfo(string filename, List<UserInfo> userInfos)
-        {
+        public PersistendUserInfo(string filename, List<UserInfo> userInfos) {
             this.filename = filename;
             UserInfos = userInfos;
         }
 
-        public static PersistendUserInfo LoadOrCreate(string filename)
-        {
+        public static PersistendUserInfo LoadOrCreate(string filename) {
             if (File.Exists(filename))
             {
                 return Load(filename);
@@ -37,8 +34,7 @@ namespace TwitchBot
             return result;
         }
 
-        public static PersistendUserInfo Load(string filename)
-        {
+        public static PersistendUserInfo Load(string filename) {
             string lines;
             try
             {
@@ -61,8 +57,7 @@ namespace TwitchBot
             return new PersistendUserInfo(filename, deserialized);
         }
 
-        public void Save()
-        {
+        public void Save() {
 
             try
             {
@@ -81,8 +76,7 @@ namespace TwitchBot
             }
         }
 
-        public int GetPointsOf(string userId)
-        {
+        public int GetPointsOf(string userId) {
             var userInfo = GetUserInfo(userId);
 
             if(userInfo is not null) {
@@ -92,8 +86,7 @@ namespace TwitchBot
             return 0;
         }
 
-        public void AddPointsTo(string userId, int points = 1)
-        {
+        public void AddPointsTo(string userId, int points = 1) {
             if (points > 0)
             {
                 var userInfo = GetUserInfo(userId);
@@ -118,8 +111,7 @@ namespace TwitchBot
             }
         }
 
-        public void RemovePointsFrom(string userId, int points = 1)
-        {
+        public void RemovePointsFrom(string userId, int points = 1) {
             var userInfo = GetUserInfo(userId);
 
             if (userInfo is not null && userInfo.Points >= points)
@@ -135,8 +127,7 @@ namespace TwitchBot
             Console.WriteLine($"Points removed from {userId}");
         }
 
-        public UserInfo GetUserInfo(string userId)
-        {
+        public UserInfo GetUserInfo(string userId) {
             return (from userInfo in UserInfos
                    where userInfo.UserId == userId
                    select userInfo).FirstOrDefault();

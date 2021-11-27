@@ -13,13 +13,11 @@ namespace TwitchBot {
         public static IAuthenticator Broadcaster { get; } = new BroadcasterAuthenticator();
         public static IAuthenticator ModOrBroadcaster { get; } = Mod | Broadcaster;
 
-        public static IAuthenticator SingleUser(string userId)
-        {
+        public static IAuthenticator SingleUser(string userId) {
             return new SingleUserAuthenticator(userId);
         }
 
-        public static IAuthenticator Points(int points)
-        {
+        public static IAuthenticator Points(int points) {
             return new UserPointAuthenticator(points);
         }
 
@@ -56,17 +54,14 @@ namespace TwitchBot {
             }
         }
 
-        private class UserPointAuthenticator : IAuthenticator
-        {
+        private class UserPointAuthenticator : IAuthenticator {
             private int points;
 
-            public UserPointAuthenticator(int points)
-            {
+            public UserPointAuthenticator(int points) {
                 this.points = points;
             }
 
-            public bool Authenticate(ChatMessage message)
-            {
+            public bool Authenticate(ChatMessage message) {
                 var userPoints = PersistendUserInfo.Instance.GetPointsOf(message.UserId);
 
                 return userPoints >= points;

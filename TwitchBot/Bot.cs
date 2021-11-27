@@ -48,8 +48,7 @@ namespace TwitchBot {
             timedPointsThread.Start();
         }
 
-        private void HandlePoints()
-        {
+        private void HandlePoints() {
             Console.WriteLine("Started thread to handle points...");
 
             while (true)
@@ -256,7 +255,7 @@ namespace TwitchBot {
 
         private void OnClientJoinedChannel(object sender, OnJoinedChannelArgs args) {
             logging = false;
-            //SendMessage("Achtung, Achtung, der persönliche Bedienstete von Lord coder2k ist eingetroffen!");
+            SendMessage("Achtung, Achtung, der persönliche Bedienstete von Lord coder2k ist eingetroffen!");
         }
 
         private bool HandleCommands(ChatMessage message) {
@@ -293,8 +292,7 @@ namespace TwitchBot {
             Console.WriteLine($"Connected to {args.AutoJoinChannel}");
         }
 
-        public void SendMessage(string message)
-        {
+        public void SendMessage(string message) {
             PrintUserMessage(config.Username, message,
                              message.StartsWith("/me"),
                              Color.BotHighlighted);
