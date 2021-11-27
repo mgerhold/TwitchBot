@@ -1,7 +1,6 @@
 ﻿using System;
 
-namespace TwitchBot.Models
-{
+namespace TwitchBot.Models {
     public class PointSystemSettings {
         public int UserJoinAmount { get; set; } = 1;
         public int UserTimedAmount { get; set; } = 5;

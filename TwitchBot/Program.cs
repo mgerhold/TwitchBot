@@ -1,7 +1,5 @@
 ﻿using System;
 using System.IO;
-using TwitchLib.Client.Enums;
-using TwitchLib.Client.Extensions;
 using TwitchBot.Models;
 
 namespace TwitchBot {

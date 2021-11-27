@@ -1,15 +1,8 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TwitchBot.Models;
-using TwitchBot;
 
-namespace TwitchBot.Models
-{
+namespace TwitchBot.Models {
 
     class Config {
         public string Username { get; set; }
@@ -36,7 +29,7 @@ namespace TwitchBot.Models
         public static Config Load() {
             string lines;
             try {
-                lines = File.ReadAllText(filename);                
+                lines = File.ReadAllText(filename);
             } catch (Exception e) {
                 throw new Exception("Unable to load config file", e);
             }

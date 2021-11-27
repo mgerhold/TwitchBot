@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TwitchLib.Client.Models;
+﻿using TwitchLib.Client.Models;
 
 namespace TwitchBot {
     internal class Authenticators {
@@ -39,17 +34,14 @@ namespace TwitchBot {
             }
         }
 
-        private class SingleUserAuthenticator : IAuthenticator
-        {
+        private class SingleUserAuthenticator : IAuthenticator {
             private string userID;
 
-            public SingleUserAuthenticator(string userID)
-            {
+            public SingleUserAuthenticator(string userID) {
                 this.userID = userID;
             }
 
-            public bool Authenticate(ChatMessage message)
-            {
+            public bool Authenticate(ChatMessage message) {
                 return message.UserId == userID;
             }
         }
@@ -62,7 +54,7 @@ namespace TwitchBot {
             }
 
             public bool Authenticate(ChatMessage message) {
-                var userPoints = PersistendUserInfo.Instance.GetPointsOf(message.UserId);
+                var userPoints = PersistentUserInfo.Instance.GetPointsOf(message.UserId);
 
                 return userPoints >= points;
             }

@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TwitchBot.Models;
-using TwitchBot;
 
-namespace TwitchBot.Models
-{
+namespace TwitchBot.Models {
 
     class Color {
         public ConsoleColor Foreground { get; set; }

@@ -1,12 +1,6 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TwitchLib.Client.Models;
-using TwitchBot;
+﻿using TwitchLib.Client.Models;
 
-namespace TwitchBot.Commands
-{
+namespace TwitchBot.Commands {
 
     class EchoCommand : Command {
         public string Response { get; set; }
@@ -15,7 +9,7 @@ namespace TwitchBot.Commands
             bot.SendMessage(ApplyPlaceholders(Response, message));
         }
 
-        protected override void InvokeImplementation(Bot bot) {            
+        protected override void InvokeImplementation(Bot bot) {
             bot.SendMessage(Response);
         }
     }
