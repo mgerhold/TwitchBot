@@ -23,6 +23,10 @@ namespace TwitchBot {
                 InvokeImplementation(bot);
                 return;
             }
+            if (message.IsMe) {
+                bot.SendMessage("Server commands are blocked.");
+                return;
+            }
             if (!Authenticator.Authenticate(message)) {
                 bot.SendMessage($"@{message.Username} Ah, ah, ah! Du hast das Zauberwort nicht gesagt! Ah, ah, ah!");
                 return;
