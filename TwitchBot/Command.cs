@@ -45,22 +45,9 @@ namespace TwitchBot {
         }
 
         public static string ApplyPlaceholders(string response, ChatMessage message) {
-            /*var usersTask = Bot.Api.Helix.Users.GetUsersAsync(
-                logins: new List<string>(){ "coder2k" },
-                accessToken: Bot.Config.OAuthToken); // wrong token?!
-            Task.WaitAll(usersTask);
-            foreach (var user in usersTask.Result.Users) {
-                Console.WriteLine($"\tGot user: {user.DisplayName}");
-            }*/
-            /*var task = Bot.Api.Helix.Channels.GetChannelInformationAsync(Bot.Config.Channel);
-            Task.WaitAll(task);
-            var channelInformation = task.Result;
-            foreach (var info in channelInformation.Data) {
-                info.
-            }*/
             Dictionary<string, string> placeholders = new() {
                 { "$user", message.Username },
-                //{ "$subcount", }
+                // TODO: { "$subcount", }
             };
             var responseString = response;
             foreach (var (placeholder, replacement) in placeholders) {                
@@ -79,6 +66,10 @@ namespace TwitchBot {
                 return match.Value;
             });
             responseString = Regex.Replace(responseString, parameterPattern, evaluator);
+            // only /me is allowed at the start of the message
+            if (responseString.StartsWith('/') && !responseString.StartsWith("/me")) {
+                responseString = $"@{message.Username} Du kannst mich nicht manipulieren, du Hund!";
+            }
             return responseString;
         }
 
