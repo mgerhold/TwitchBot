@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using TwitchLib.Client.Models;
 
 namespace TwitchBot {
@@ -12,6 +14,8 @@ namespace TwitchBot {
         public bool ModOverridesCooldown { get; init; } = true;
         public DateTime LastInvoked { get; private set; } = DateTime.MinValue;
         private bool CooldownAllowsInvocation => !Cooldown.HasValue || DateTime.Now >= LastInvoked + Cooldown;
+
+        private static readonly string parameterPattern = @"\$[0-9]+";
 
         private bool IsCooldownOverriden(ChatMessage message) {
             return message.IsBroadcaster || (message.IsModerator && ModOverridesCooldown);
@@ -41,23 +45,41 @@ namespace TwitchBot {
         }
 
         public static string ApplyPlaceholders(string response, ChatMessage message) {
-            var responseParts = response.Split(' ');
-            var originalMessageParts = message.Message.Split(' ');
+            /*var usersTask = Bot.Api.Helix.Users.GetUsersAsync(
+                logins: new List<string>(){ "coder2k" },
+                accessToken: Bot.Config.OAuthToken); // wrong token?!
+            Task.WaitAll(usersTask);
+            foreach (var user in usersTask.Result.Users) {
+                Console.WriteLine($"\tGot user: {user.DisplayName}");
+            }*/
+            /*var task = Bot.Api.Helix.Channels.GetChannelInformationAsync(Bot.Config.Channel);
+            Task.WaitAll(task);
+            var channelInformation = task.Result;
+            foreach (var info in channelInformation.Data) {
+                info.
+            }*/
             Dictionary<string, string> placeholders = new() {
-                { "$user", message.Username }
+                { "$user", message.Username },
+                //{ "$subcount", }
             };
-            for (int i = 0; i < responseParts.Length; i++) {
-                if (responseParts[i].StartsWith("$") &&
-                    uint.TryParse(responseParts[i].Substring(1), out var index)) {
-                    if (index > originalMessageParts.Length - 1) {
-                        continue;
-                    }
-                    responseParts[i] = originalMessageParts[index];
-                } else if (placeholders.ContainsKey(responseParts[i])) {
-                    responseParts[i] = placeholders[responseParts[i]];
-                }
+            var responseString = response;
+            foreach (var (placeholder, replacement) in placeholders) {                
+                responseString = responseString.Replace(placeholder, replacement);
             }
-            return string.Join(" ", responseParts);
+            var originalMessageParts = message.Message.Split(' ');
+            var evaluator = new MatchEvaluator(match => {
+                if (uint.TryParse(match.Value.Substring(1), out var index) &&
+                    index <= originalMessageParts.Length - 1) {
+                    var replacement = originalMessageParts[index];
+                    if (replacement.StartsWith('@')) {
+                        return replacement.Substring(1);
+                    }
+                    return originalMessageParts[index];
+                }                
+                return match.Value;
+            });
+            responseString = Regex.Replace(responseString, parameterPattern, evaluator);
+            return responseString;
         }
 
         protected abstract void InvokeImplementation(Bot bot);

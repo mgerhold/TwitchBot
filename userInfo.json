@@ -3,135 +3,135 @@
   "$values": [
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "61198352",
-      "LastPointSet": "2021-11-27T15:07:07.6122309+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6472402+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "675583845",
-      "LastPointSet": "2021-11-27T15:07:11.8152667+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6474048+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "551721213",
-      "LastPointSet": "2021-11-27T15:07:14.6221361+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6476154+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "80661386",
-      "LastPointSet": "2021-11-27T15:07:14.8566539+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6477219+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "43782205",
-      "LastPointSet": "2021-11-27T15:07:24.2299093+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6478019+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "89842589",
-      "LastPointSet": "2021-11-27T15:07:26.4847765+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6478804+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "59417953",
-      "LastPointSet": "2021-11-27T15:07:26.4947157+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6479641+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "185066011",
-      "LastPointSet": "2021-11-27T15:07:28.3331973+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6480436+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "152353879",
-      "LastPointSet": "2021-11-27T15:07:28.7506246+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6481217+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "111580068",
-      "LastPointSet": "2021-11-27T15:07:30.1971783+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6481944+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "215415687",
-      "LastPointSet": "2021-11-27T15:07:31.3498439+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6482642+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "52256526",
-      "LastPointSet": "2021-11-27T15:07:31.7852074+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6483107+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "79983547",
-      "LastPointSet": "2021-11-27T15:07:32.8041781+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6483568+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "169680303",
-      "LastPointSet": "2021-11-27T15:07:34.957334+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6484025+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "19264788",
-      "LastPointSet": "2021-11-27T15:07:35.1415933+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6484766+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "153171603",
-      "LastPointSet": "2021-11-27T15:07:38.6235037+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6485464+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "41361766",
-      "LastPointSet": "2021-11-27T15:07:41.3290601+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6486172+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "207710777",
-      "LastPointSet": "2021-11-27T15:07:51.9443278+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6486883+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "31445783",
-      "LastPointSet": "2021-11-27T15:07:53.7212487+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6487761+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "572136583",
-      "LastPointSet": "2021-11-27T15:08:03.1837387+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6492594+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "164580508",
-      "LastPointSet": "2021-11-27T15:08:17.4899706+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6496229+01:00"
     },
     {
       "$type": "TwitchBot.Models.UserInfo, TwitchBot",
-      "Points": 1,
+      "Points": 6,
       "UserId": "131840739",
-      "LastPointSet": "2021-11-27T15:11:01.0216929+01:00"
+      "LastPointSet": "2021-12-03T18:47:39.6500852+01:00"
     }
   ]
 }

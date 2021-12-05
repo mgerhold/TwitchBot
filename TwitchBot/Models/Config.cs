@@ -6,8 +6,13 @@ namespace TwitchBot.Models {
 
     class Config {
         public string Username { get; set; }
-        public string OAuthToken { get; set; }
+        public string ClientID { get; set; }
+        public string ClientSecret { get; set; }
+        public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
+        public string TwitchRedirectURL { get; set; }
         public string Channel { get; set; }
+        public string BroadcasterId { get; set; }
         public TimeSpan TimedMessagesInterval { get; set; } = TimeSpan.FromMinutes(25);
 
         private const string filename = "config.json";
@@ -19,8 +24,9 @@ namespace TwitchBot.Models {
             Console.WriteLine("Creating new default config file");
             var result = new Config {
                 Username = "name of bot",
-                OAuthToken = "token",
-                Channel = "channel name"
+                Channel = "channel name",
+                ClientID = "client id",
+                ClientSecret = "client secret",
             };
             result.Save();
             return result;

@@ -1,8 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 using TwitchBot.Commands;
 using TwitchBot.Models;
+using TwitchLib.Api;
+using TwitchLib.Api.Core.Enums;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -13,18 +18,20 @@ namespace TwitchBot {
     class Bot {
         private TwitchClient client = null;
         private bool logging = true; // output logging messages? gets automatically disabled on successful connect
-        private Config config = null;
+        public static Config Config { get; private set; } = null;
         private CommandList nativeCommands = new(); // commands that execute C# code
         private CommandList customCommands = PersistentCommandList.LoadOrCreate("commands.json"); // commands that can be set through the Twitch chat        
         private Mutex commandListsMutex = new Mutex();
         private Thread timedCommandsThread = null;
         private PointSystem pointSystemManager = new PointSystem();
+        public static TwitchAPI Api { get; private set; }
 
 
         public Bot(Config config) {
-            SetupNativeCommands();
-            this.config = config;
-            var credentials = new ConnectionCredentials(config.Username, config.OAuthToken);
+            Config = config;
+            Authenticate().GetAwaiter().GetResult();            
+            SetupNativeCommands();            
+            var credentials = new ConnectionCredentials(config.Username, config.AccessToken);
             var clientOptions = new ClientOptions {
                 MessagesAllowedInPeriod = 750,
                 ThrottlingPeriod = TimeSpan.FromSeconds(30)
@@ -44,24 +51,91 @@ namespace TwitchBot {
             timedCommandsThread = new Thread(new ThreadStart(HandleTimers));
             timedCommandsThread.Start();
 
-            pointSystemManager.Init(client, this);
+            // disabled point system for now
+            // pointSystemManager.Init(client, this);
+        }
+
+        private async Task Authenticate() {
+            Api = new TwitchAPI();
+            Api.Settings.ClientId = Config.ClientID;
+            Api.Settings.Secret = Config.ClientSecret;
+            Api.Settings.Scopes = new();
+            if (Config.AccessToken is not null) {
+                // the bot had access before
+                Console.WriteLine("Trying to refresh token...");
+                var refreshResponse = (await Api.Auth.RefreshAuthTokenAsync(Config.RefreshToken, Config.ClientSecret, Config.ClientID));
+                Api.Settings.AccessToken = refreshResponse.AccessToken;
+                Config.AccessToken = refreshResponse.AccessToken;
+                Config.RefreshToken = refreshResponse.RefreshToken;
+            } else {
+                var server = new WebServer(Config.TwitchRedirectURL);
+                var url = Api.Auth.GetAuthorizationCodeUrl(Config.TwitchRedirectURL, Api.Settings.Scopes);
+                url = url.Replace("scope=", "scope=" + string.Join("+", new string[]{
+                    "channel:moderate",
+                    "chat:edit",
+                    "chat:read",
+                    "whispers:read",
+                    "whispers:edit",
+                    "channel:manage:broadcast",
+                    "channel:manage:polls",
+                    "channel:manage:predictions",
+                    "channel:read:hype_train",
+                    "channel:read:polls",
+                    "channel:read:predictions",
+                    "channel:read:redemptions",
+                    "channel:read:subscriptions",
+                    "moderation:read",
+                    "moderator:manage:banned_users",
+                    "user:read:broadcast",
+                    "user:read:subscriptions",
+                }));
+                Console.WriteLine($"Please authorize here:\n{url}");
+                // listen for incoming events
+                var auth = await server.Listen();
+                // exchange auth code for oauth access/refresh
+                var response = await Api.Auth.GetAccessTokenFromCodeAsync(auth.Code,
+                                                                          Config.ClientSecret,
+                                                                          Config.TwitchRedirectURL);
+                // update TwitchLib's api with the recently acquired access token
+                Api.Settings.AccessToken = response.AccessToken;
+                Config.AccessToken = response.AccessToken;
+                Config.RefreshToken = response.RefreshToken;                
+            }
+            // get the auth'd user
+            var user = (await Api.Helix.Users.GetUsersAsync()).Users[0];
+          
+            Console.WriteLine($"Authorization success!\nUser: {user.DisplayName} (id: {user.Id})");
+
+            var broadcaster = (await Api.Helix.Users.GetUsersAsync(logins: new() { Config.Username })).Users[0];
+            Config.BroadcasterId = broadcaster.Id;
+            var channelInformation = (await Api.Helix.Channels.GetChannelInformationAsync(broadcaster.Id)).Data;
+            foreach (var info in channelInformation) {
+                Console.WriteLine($"Stream title: {info.Title}");
+            }
+            Console.WriteLine($"Is broadcaster live? {await IsBroadcasterLive()}");
+            Config.Save();
+        }
+
+        private async Task<bool> IsBroadcasterLive() {
+            var streams = (await Api.Helix.Streams.GetStreamsAsync(userIds: new() { Config.BroadcasterId })).Streams;
+            return streams.Length > 0;
         }
 
         private void HandleTimers() {
             Console.WriteLine("Started thread to handle timers...");
             while (true) { // approved by Andrei Alexandrescu
-                var sleepDuration = config.TimedMessagesInterval;
+                var sleepDuration = Config.TimedMessagesInterval;
                 try {
                     commandListsMutex.WaitOne();
                     var allTimerCommands = nativeCommands.Commands
                         .Concat(customCommands.Commands)
                         .Where(command => command.IsTimer);
-                    if (allTimerCommands.All(command => command.LastInvoked + config.TimedMessagesInterval > DateTime.Now)) {
+                    if (allTimerCommands.All(command => command.LastInvoked + Config.TimedMessagesInterval > DateTime.Now)) {
                         var oldestCommand = allTimerCommands
                             .OrderBy(command => command.LastInvoked)
                             .FirstOrDefault();
                         if (oldestCommand is not null) {
-                            sleepDuration = oldestCommand.LastInvoked + config.TimedMessagesInterval - DateTime.Now;
+                            sleepDuration = oldestCommand.LastInvoked + Config.TimedMessagesInterval - DateTime.Now;
                         }
                     } else {
                         var nextToInvoke = allTimerCommands
@@ -109,7 +183,7 @@ namespace TwitchBot {
                 Trigger = Triggers.StartsWithWord("!interval"),
                 Authenticator = Authenticators.Broadcaster,
                 Handler = (bot, message) => {
-                    bot.SendMessage($"@{message.Username} The current timer interval is {config.TimedMessagesInterval} minutes.");
+                    bot.SendMessage($"@{message.Username} The current timer interval is {Config.TimedMessagesInterval} minutes.");
                 },
                 Cooldown = null
             });
@@ -126,9 +200,9 @@ namespace TwitchBot {
                         bot.SendMessage($"@{message.Username} \"{parts[1]}\" is not a valid integer!");
                         return;
                     }
-                    config.TimedMessagesInterval = TimeSpan.FromMinutes(minutes);
+                    Config.TimedMessagesInterval = TimeSpan.FromMinutes(minutes);
                     bot.SendMessage($"@{message.Username} Timer interval set to {minutes}.");
-                    config.Save();
+                    Config.Save();
                 },
                 Cooldown = null
             });
@@ -265,14 +339,14 @@ namespace TwitchBot {
         }
 
         public void SendMessage(string message) {
-            PrintUserMessage(config.Username, message,
+            PrintUserMessage(Config.Username, message,
                              message.StartsWith("/me"),
                              Color.BotHighlighted);
             if (!client.IsConnected || client.JoinedChannels.Count == 0) {
                 Console.WriteLine($"Unable to send message since bot is not connected (message was {message})");
                 return;
             }
-            client.SendMessage(config.Channel, message);
+            client.SendMessage(Config.Channel, message);
         }
 
         private void PrintUserMessage(string username, string message, bool isMe = false,
