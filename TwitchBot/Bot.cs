@@ -24,6 +24,8 @@ namespace TwitchBot {
         private Mutex commandListsMutex = new Mutex();
         private Thread timedCommandsThread = null;
         private PointSystem pointSystemManager = new PointSystem();
+        private System.Timers.Timer refreshTimer = null;
+        private bool timedCommandsEnabled = true; // TODO: maybe change default value later?
         public static TwitchAPI Api { get; private set; }
 
 
@@ -55,6 +57,12 @@ namespace TwitchBot {
             // pointSystemManager.Init(client, this);
         }
 
+        private void SetupRefreshTimer(int expiresIn) {
+            refreshTimer = new System.Timers.Timer(expiresIn * 0.8 * 1000.0);
+            refreshTimer.Elapsed += async (sender, e) => await Authenticate();
+            refreshTimer.Start();
+        }
+
         private async Task Authenticate() {
             Api = new TwitchAPI();
             Api.Settings.ClientId = Config.ClientID;
@@ -62,9 +70,12 @@ namespace TwitchBot {
             Api.Settings.Scopes = new();
             if (Config.AccessToken is not null) {
                 // the bot had access before
-                Console.WriteLine("Trying to refresh token...");
+                Console.WriteLine("\t\t|================================|");
+                Console.WriteLine("\t\t|   Trying to refresh token...   |");
+                Console.WriteLine("\t\t|================================|");
                 var refreshResponse = (await Api.Auth.RefreshAuthTokenAsync(Config.RefreshToken, Config.ClientSecret, Config.ClientID));
                 Api.Settings.AccessToken = refreshResponse.AccessToken;
+                SetupRefreshTimer(refreshResponse.ExpiresIn);
                 Config.AccessToken = refreshResponse.AccessToken;
                 Config.RefreshToken = refreshResponse.RefreshToken;
             } else {
@@ -98,6 +109,7 @@ namespace TwitchBot {
                                                                           Config.TwitchRedirectURL);
                 // update TwitchLib's api with the recently acquired access token
                 Api.Settings.AccessToken = response.AccessToken;
+                SetupRefreshTimer(response.ExpiresIn);
                 Config.AccessToken = response.AccessToken;
                 Config.RefreshToken = response.RefreshToken;                
             }
@@ -124,32 +136,34 @@ namespace TwitchBot {
         private void HandleTimers() {
             Console.WriteLine("Started thread to handle timers...");
             while (true) { // approved by Andrei Alexandrescu
-                var sleepDuration = Config.TimedMessagesInterval;
-                try {
-                    commandListsMutex.WaitOne();
-                    var allTimerCommands = nativeCommands.Commands
-                        .Concat(customCommands.Commands)
-                        .Where(command => command.IsTimer);
-                    if (allTimerCommands.All(command => command.LastInvoked + Config.TimedMessagesInterval > DateTime.Now)) {
-                        var oldestCommand = allTimerCommands
-                            .OrderBy(command => command.LastInvoked)
-                            .FirstOrDefault();
-                        if (oldestCommand is not null) {
-                            sleepDuration = oldestCommand.LastInvoked + Config.TimedMessagesInterval - DateTime.Now;
+                var sleepDuration = (timedCommandsEnabled ? Config.TimedMessagesInterval : TimeSpan.FromSeconds(10));
+                if (timedCommandsEnabled) {
+                    try {
+                        commandListsMutex.WaitOne();
+                        var allTimerCommands = nativeCommands.Commands
+                            .Concat(customCommands.Commands)
+                            .Where(command => command.IsTimer);
+                        if (allTimerCommands.All(command => command.LastInvoked + Config.TimedMessagesInterval > DateTime.Now)) {
+                            var oldestCommand = allTimerCommands
+                                .OrderBy(command => command.LastInvoked)
+                                .FirstOrDefault();
+                            if (oldestCommand is not null) {
+                                sleepDuration = oldestCommand.LastInvoked + Config.TimedMessagesInterval - DateTime.Now;
+                            }
+                        } else {
+                            var nextToInvoke = allTimerCommands
+                                .OrderBy(command => command.LastInvoked)
+                                .FirstOrDefault();
+                            if (nextToInvoke is not null) {
+                                Console.WriteLine("Invoking timed command!");
+                                nextToInvoke.Invoke(this);
+                            }
                         }
-                    } else {
-                        var nextToInvoke = allTimerCommands
-                            .OrderBy(command => command.LastInvoked)
-                            .FirstOrDefault();
-                        if (nextToInvoke is not null) {
-                            Console.WriteLine("Invoking timed command!");
-                            nextToInvoke.Invoke(this);
-                        }
+                    } finally {
+                        commandListsMutex.ReleaseMutex();
                     }
-                } finally {
-                    commandListsMutex.ReleaseMutex();
                 }
-                Console.WriteLine($"Timed command thread sleeping...");
+                Console.WriteLine($"Timed command thread sleeping for {sleepDuration}...");
                 Thread.Sleep(sleepDuration);
             }
         }
@@ -272,7 +286,34 @@ namespace TwitchBot {
                 Cooldown = null
             });
             AddNativeCommand(new NativeCommand {
-                Trigger = Triggers.StartsWithWord("!list"),
+                Trigger = Triggers.StartsWithWord("!edit"),
+                Authenticator = Authenticators.ModOrBroadcaster,
+                Handler = (bot, message) => {
+                    var parts = message.Message.Split(" ", 3);
+                    if (parts.Length != 3) {
+                        bot.SendMessage($"@{message.Username} Syntax: !edit <trigger> <new_message>");
+                        return;
+                    }
+                    var trigger = parts[1];
+                    var newMessage = parts[2];
+                    var findResult = customCommands.Commands.FirstOrDefault(
+                        command => command.Trigger.ShouldTrigger(trigger));
+                    if (findResult is null) {
+                        bot.SendMessage($"@{message.Username} Unbekannter Trigger: \"{trigger}\"");
+                        return;
+                    }
+                    var newCommand = new EchoCommand {
+                        Trigger = findResult.Trigger,
+                        Response = newMessage,
+                        Cooldown = findResult.Cooldown,
+                    };
+                    customCommands.Remove(findResult);
+                    customCommands.Add(newCommand);
+                    bot.SendMessage($"@{message.Username} Kommando \"{trigger}\" erfolgreich geändert.");
+                }
+            });
+            AddNativeCommand(new NativeCommand {
+                Trigger = Triggers.StartsWithWord("!list"),                
                 Handler = (bot, message) => {
                     var liststring = nativeCommands.Commands
                             .Concat(customCommands.Commands)
@@ -284,6 +325,74 @@ namespace TwitchBot {
                     bot.SendMessage($"@{message.Username} Verfügbare Kommandos: {liststring}");
                 },
                 Cooldown = TimeSpan.FromSeconds(30)
+            });
+            AddNativeCommand(new NativeCommand {
+                Trigger = Triggers.StartsWithWord("!setUserLevel"),
+                Authenticator = Authenticators.ModOrBroadcaster,
+                Handler = (bot, message) => {
+                    var parts = message.Message.Split(" ", 3);
+                    if (parts.Length != 3) {
+                        bot.SendMessage($"@{message.Username} Syntax: !setUserLevel <trigger> <pleb|modOrBroadcaster|broadcaster>");
+                        return;
+                    }
+                    var trigger = parts[1];
+                    var userLevel = parts[2];
+                    var findResult = customCommands.Commands.FirstOrDefault(
+                        command => command.Trigger.ShouldTrigger(trigger));
+                    if (findResult is null) {
+                        bot.SendMessage($"@{message.Username} Unbekannter Trigger: \"{trigger}\"");
+                        return;
+                    }
+                    if (userLevel != "pleb" && userLevel != "modOrBroadcaster" && userLevel != "broadcaster") {
+                        
+                    }
+                    IAuthenticator authenticator = null;
+                    switch (userLevel) {
+                        case "pleb":
+                            authenticator = Authenticators.Pleb;
+                            break;
+                        case "modOrBroadcaster":
+                            authenticator = Authenticators.ModOrBroadcaster;
+                            break;
+                        case "broadcaster":
+                            authenticator = Authenticators.Broadcaster;
+                            break;
+                        default:
+                            bot.SendMessage($"@{message.Username} \"{userLevel}\" is no valid user level. Must be pleb, modOrBroadcaster or broadcaster.");
+                            return;
+                    }                    
+                    var newCommand = new EchoCommand() {
+                        Cooldown = findResult.Cooldown,
+                        IsTimer = findResult.IsTimer,
+                        Authenticator = authenticator,
+                        Trigger = findResult.Trigger,
+                        ModOverridesCooldown = findResult.ModOverridesCooldown,
+                        LastInvoked = findResult.LastInvoked,
+                        Response = ((EchoCommand)findResult).Response,
+                    };
+                    customCommands.Remove(findResult);
+                    customCommands.Add(newCommand);
+                    bot.SendMessage($"@{message.Username} Changed user level of command \"{trigger}\" to \"{userLevel}\"");
+                },
+                Cooldown = null
+            });
+            AddNativeCommand(new NativeCommand() {
+                Trigger = Triggers.StartsWithWord("!enable"),
+                Authenticator = Authenticators.Broadcaster,
+                Handler = (bot, message) => {
+                    timedCommandsEnabled = true;
+                    bot.SendMessage($"@{message.Username} Timed commands are now enabled.");
+                },
+                Cooldown = null,
+            });
+            AddNativeCommand(new NativeCommand() {
+                Trigger = Triggers.StartsWithWord("!disable"),
+                Authenticator = Authenticators.Broadcaster,
+                Handler = (bot, message) => {
+                    timedCommandsEnabled = true;
+                    bot.SendMessage($"@{message.Username} Timed commands are now disabled.");
+                },
+                Cooldown = null,
             });
         }
 

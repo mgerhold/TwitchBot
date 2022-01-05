@@ -12,7 +12,7 @@ namespace TwitchBot {
         public IAuthenticator Authenticator { get; init; } = Authenticators.Pleb;
         public ITrigger Trigger { get; init; } = null;
         public bool ModOverridesCooldown { get; init; } = true;
-        public DateTime LastInvoked { get; private set; } = DateTime.MinValue;
+        public DateTime LastInvoked { get; set; } = DateTime.MinValue;
         private bool CooldownAllowsInvocation => !Cooldown.HasValue || DateTime.Now >= LastInvoked + Cooldown;
 
         private static readonly string parameterPattern = @"\$[0-9]+";
@@ -67,7 +67,8 @@ namespace TwitchBot {
             });
             responseString = Regex.Replace(responseString, parameterPattern, evaluator);
             // only /me is allowed at the start of the message
-            if (responseString.StartsWith('/') && !responseString.StartsWith("/me")) {
+            if ((responseString.StartsWith('/') || responseString.StartsWith('.'))
+                && !responseString.StartsWith("/me")) {
                 responseString = $"@{message.Username} Du kannst mich nicht manipulieren, du Hund!";
             }
             return responseString;
